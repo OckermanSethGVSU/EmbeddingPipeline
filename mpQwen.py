@@ -109,22 +109,15 @@ def batch_by_char_limit(papers, char_limit, batch_limit, paper_limit):
         yield meta_batch, paper_batch
 
 def run_on_gpu(args):
-    BASE = "/lus/eagle/projects/radix-io/sockerman/peS2oData/textData/fullTexts/"
-
-    
     t1 = time.time()
 
-
+    BASE = "/lus/eagle/projects/radix-io/sockerman/peS2oData/textData/fullTexts/"
     gpu_id, batch_num, info = args
     device = f"cuda:{gpu_id}"
     batch_num += gpu_id
     filepath = BASE + info[0]
-    # filepath = "/eagle/projects/radix-io/sockerman/PeS2oEmbeddings/numbers.txt"
-    # print(gpu_id, batch_num, info, filepath)
     
-     
-    
-    print(f"[GPU {device}] Processing {filepath} lines {info[1]}-{info[1] + info[2]}")
+    print(f"GPU {device} processing {filepath} lines {info[1]}-{info[1] + info[2]}")
     
     model_start = time.time()
     model = SentenceTransformer(
@@ -157,9 +150,8 @@ def run_on_gpu(args):
 
             item = json.loads(line)
             papers.append([item['id'], item['text']])
-            # papers.append(line)
 
-            set heuristic parameters based on input type           
+            # Set heuristic parameters based on input type           
             if first:
                 first = False  # check the type only once
 
@@ -175,10 +167,7 @@ def run_on_gpu(args):
                     max_batch_size = 8
                     paper_len_limit = 100000
     
-
-    # print(f"gpu: {gpu_id}",len(papers),papers[0], papers[-1])
-    # print()
-    return 
+ 
     io_stop = time.time()
     embeddings = []
     meta = []
@@ -198,13 +187,6 @@ def run_on_gpu(args):
                 embeddings.append(e)
                 meta.extend(meta_batch)
 
-                # target = [len(item) for item in batch]
-                # total += len(meta_batch)
-                # elapsed = time.time() - inf_start
-                # rate = total / elapsed
-                # print(rate, len(target))
-                # print(f"Success Batch stats: ", len(batch), np.sum(target), flush=True)
-                # total += len(meta_batch)
             except torch.cuda.OutOfMemoryError:
                 
                 target = [len(item) for item in batch]
@@ -212,12 +194,9 @@ def run_on_gpu(args):
 
                 for metaItem, item in zip(meta_batch,batch):
                     try:
-                        # total += 1
                         e = model.encode([item])
-                        # print(e.shape,flush=True)
                         embeddings.append(e)
                         meta.append(metaItem)
-                        # total += 1
 
                     except torch.cuda.OutOfMemoryError:
                         print(f"GPU {gpu_id} item failed ", len(item), flush=True)
@@ -227,29 +206,23 @@ def run_on_gpu(args):
  
     
     inf_end  = time.time()
-
-    print(inf_end-inf_start)
     final_embeddings = np.concatenate(embeddings, axis=0)
     final_meta = np.array(meta)
 
-    new_path = f"/eagle/projects/radix-io/sockerman/peS2oData/embeddings/fullTexts/{info[0].replace(".json","")}-{info[1]}-{info[1]+info[2]}.npz" 
-    print(new_path)
-    return
+    new_path = f"/eagle/projects/radix-io/sockerman/peS2oData/embeddings/fullTexts/{info[0].replace('.json','')}-{info[1]}-{info[1]+info[2]}.npz"
     np.savez(new_path, embeddings=final_embeddings, source_pdfs=final_meta)
     
     t2 = time.time()
     
     print(f"[GPU {device}] done with {filepath} lines {info[1]}-{info[1] + info[2]}")
-    
-    # BASE = "/eagle/projects/radix-io/sockerman/embeddings/perGPULogs/"
-    
-    with open(BASE + f"batch{batch_id}_gpu{gpu_id}_timing.csv", "w", newline='') as f:
+        
+    with open(f"./perGPULogs/batch{batch_num}_gpu{gpu_id}_timing.csv", "w", newline='') as f:
         writer = csv.writer(f)
         writer.writerow(['model_loading', 'i_o', 'inference', 'total'])
         writer.writerow([model_end - model_start, io_stop - io_start, inf_end - inf_start, t2 - t1 ])
 
     if len(failed) > 0:
-        with open(BASE + f"batch{batch_id}_gpu{gpu_id}_failed.csv", "w") as f:
+        with open(f"./perGPULogs/batch{batch_num}_gpu{gpu_id}_failed.csv", "w") as f:
             writer = csv.writer(f)
             f.write(f"source json: {filepath}\n")
             writer.writerow(['keys'])
@@ -265,13 +238,9 @@ if __name__ == "__main__":
     batch_num = int(args.batch)
     files = [ast.literal_eval(item) for item in args.files]
 
-    
- 
-    # assert len(file_list) == 4, "This script assumes exactly 4 files per node."
-
     stop_event = threading.Event()
-    # t = threading.Thread(target=monitorSystem, kwargs={"stop_event": stop_event, "batch": batch_num})
-    # t.start()
+    t = threading.Thread(target=monitorSystem, kwargs={"stop_event": stop_event, "batch": batch_num})
+    t.start()
 
     start_time = time.time()
     
@@ -284,9 +253,8 @@ if __name__ == "__main__":
 
     end_time = time.time()
     stop_event.set()
-    # t.join()
-    print("Monitoring finished.")
-
+    t.join()
+    
     with open(f"profilingData/batch{batch_num}_runtime.csv", "w") as f:
         f.write(f"runtime\n")
         f.write(f"{end_time - start_time}")
