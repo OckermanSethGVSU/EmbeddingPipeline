@@ -1,0 +1,12 @@
+filename,lines
+train-00010-of-00020.json,825161
+train-00011-of-00020.json,823453
+train-00012-of-00020.json,823416
+train-00013-of-00020.json,824635
+train-00014-of-00020.json,822793
+train-00015-of-00020.json,824697
+train-00016-of-00020.json,824380
+train-00017-of-00020.json,823822
+train-00018-of-00020.json,825222
+train-00019-of-00020.json,824583
+validation-00001-of-00002.json,51323

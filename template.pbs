@@ -1,0 +1,23 @@
+#!/bin/bash
+#PBS -l select=1:system=polaris
+#PBS -l place=scatter
+#PBS -l filesystems=home:eagle
+#PBS -l walltime=00:45:00
+#PBS -A recup
+#PBS -o __JOB__.out
+#PBS -e __JOB__.out
+#PBS -q __QUEUE__
+
+
+module use /soft/modulefiles; module load conda; conda activate base
+source /eagle/projects/radix-io/sockerman/embeddings/qEnv/bin/activate
+
+# change to target dir
+cd /eagle/projects/radix-io/sockerman/embeddings/
+
+python3 mpQwen.py --files __FILELIST__ --batch __BATCHNUMBER__
+
+
+python3 mpQwen.py --files /lus/eagle/projects/radix-io/sockerman/peS2oData/abstracts/train-00000-of-00020.json --batch 0
+python3 mpQwen.py --files /lus/eagle/projects/radix-io/sockerman/peS2oData/fullTexts/train-00010-of-00020.json --batch 0
+python3 mpQwen.py  --batch "('train-00010-of-00020.json', 0, 16000, 0)"
